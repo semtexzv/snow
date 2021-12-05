@@ -3,6 +3,7 @@
 
 use crate::error::{Error, PatternProblem};
 use std::str::FromStr;
+
 mod patterns;
 
 pub use self::patterns::{
@@ -31,12 +32,13 @@ impl FromStr for BaseChoice {
     }
 }
 
-/// One of `25519` or `448`, per the spec.
+/// One of `25519`, `448` or `Secp256k1` , per the spec.
 #[allow(missing_docs)]
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum DHChoice {
     Curve25519,
     Ed448,
+    Secp256k1,
 }
 
 impl FromStr for DHChoice {
@@ -47,7 +49,8 @@ impl FromStr for DHChoice {
         match s {
             "25519" => Ok(Curve25519),
             "448" => Ok(Ed448),
-            _ => bail!(PatternProblem::UnsupportedDhType),
+            "secp256k1" => Ok(Secp256k1),
+            _ => bail!(PatternProblem::UnsupportedDhType)
         }
     }
 }
@@ -139,14 +142,14 @@ impl FromStr for KemChoice {
 #[allow(missing_docs)]
 #[derive(PartialEq, Clone, Debug)]
 pub struct NoiseParams {
-    pub name:      String,
-    pub base:      BaseChoice,
+    pub name: String,
+    pub base: BaseChoice,
     pub handshake: HandshakeChoice,
-    pub dh:        DHChoice,
+    pub dh: DHChoice,
     #[cfg(feature = "hfs")]
-    pub kem:       Option<KemChoice>,
-    pub cipher:    CipherChoice,
-    pub hash:      HashChoice,
+    pub kem: Option<KemChoice>,
+    pub cipher: CipherChoice,
+    pub hash: HashChoice,
 }
 
 impl NoiseParams {
@@ -265,7 +268,7 @@ mod tests {
     fn test_single_psk_mod() {
         let p: NoiseParams = "Noise_XXpsk0_25519_AESGCM_SHA256".parse().unwrap();
         match p.handshake.modifiers.list[0] {
-            HandshakeModifier::Psk(0) => {},
+            HandshakeModifier::Psk(0) => {}
             _ => panic!("modifier isn't as expected!"),
         }
     }
@@ -277,7 +280,7 @@ mod tests {
         let p: NoiseParams = "Noise_XXpsk0+psk1+psk2_25519_AESGCM_SHA256".parse().unwrap();
         let mods = p.handshake.modifiers.list;
         match (mods[0], mods[1], mods[2]) {
-            (Psk(0), Psk(1), Psk(2)) => {},
+            (Psk(0), Psk(1), Psk(2)) => {}
             _ => panic!("modifiers weren't as expected! actual: {:?}", mods),
         }
     }
@@ -287,7 +290,7 @@ mod tests {
         let p: NoiseParams = "Noise_XXpsk0_25519_AESGCM_SHA256".parse().unwrap();
         let tokens = HandshakeTokens::try_from(&p.handshake).unwrap();
         match tokens.msg_patterns[0][0] {
-            Token::Psk(_) => {},
+            Token::Psk(_) => {}
             _ => panic!("missing token!"),
         }
     }
@@ -299,13 +302,13 @@ mod tests {
         let tokens = HandshakeTokens::try_from(&p.handshake).unwrap();
 
         match tokens.msg_patterns[0][0] {
-            Token::Psk(_) => {},
+            Token::Psk(_) => {}
             _ => panic!("missing token!"),
         }
 
         let second = &tokens.msg_patterns[1];
         match second[second.len() - 1] {
-            Token::Psk(_) => {},
+            Token::Psk(_) => {}
             _ => panic!("missing token!"),
         }
     }
